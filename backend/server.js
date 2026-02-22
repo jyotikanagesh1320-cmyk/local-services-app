@@ -14,6 +14,32 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
+/* =========================
+   DEBUG KEYS (TEMPORARY)
+========================= */
+console.log("KEY ID:", process.env.RAZORPAY_KEY_ID);
+console.log("KEY SECRET:", process.env.RAZORPAY_KEY_SECRET);
+
+/* =========================
+   TEST ROUTE (Browser Test)
+========================= */
+app.get("/test-order", async (req, res) => {
+  try {
+    const order = await razorpay.orders.create({
+      amount: 50000,
+      currency: "INR",
+    });
+
+    res.json(order);
+  } catch (err) {
+    console.error("RAZORPAY ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* =========================
+   MAIN CREATE ORDER ROUTE
+========================= */
 app.post("/create-order", async (req, res) => {
   try {
     const { amount } = req.body;
@@ -25,10 +51,14 @@ app.post("/create-order", async (req, res) => {
 
     res.json(order);
   } catch (err) {
+    console.error("RAZORPAY ERROR:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
+/* =========================
+   ROOT ROUTE
+========================= */
 app.get("/", (req, res) => {
   res.send("Backend Running ✅");
 });
