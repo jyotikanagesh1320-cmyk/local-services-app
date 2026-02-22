@@ -1,12 +1,10 @@
-// 🔹 FULL FILE REPLACE करा
-
 import { useEffect, useState } from "react";
 import {
   fetchApprovedServices,
   createBooking,
   subscribeToCustomerBookings,
   addReview,
-  updateBookingStatus, // 🔹 added
+  updateBookingStatus,
 } from "../../firebase/firestore";
 
 function CustomerDashboard({ user }) {
@@ -98,7 +96,7 @@ function CustomerDashboard({ user }) {
     setCustomerMobile("");
   };
 
-  // 🔹 UPDATED: Real Payment (Logic safe)
+  // ✅ UPDATED PAYMENT FUNCTION (LIVE BACKEND)
   const handleCompleteAndPay = async (booking) => {
     if (
       !window.confirm(
@@ -109,56 +107,30 @@ function CustomerDashboard({ user }) {
     }
 
     try {
-      const res = await fetch("http://localhost:5000/create-order", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ amount: booking.amount }),
-      });
+      const res = await fetch(
+        "https://local-services-app-lmi8.onrender.com/create-order",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ amount: booking.amount }),
+        }
+      );
 
       const order = await res.json();
 
       const options = {
-        key: "rzp_test_SIgBPJfzhw9JLP", // 🔥 Replace with real key
+        key: "rzp_test_SIqDzJXUtT675M", // 👈 ONLY KEY ID (Secret नाही)
         amount: order.amount,
         currency: "INR",
         order_id: order.id,
         name: "Local Services",
         description: "Service Payment",
 
-        method: {
-          upi: true,
-          card: false,
-          netbanking: false,
-          wallet: false,
-        },
-
-        handler: async function (response) {
-          const verifyRes = await fetch(
-            "http://localhost:5000/verify-payment",
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify(response),
-            }
-          );
-
-          const verifyData = await verifyRes.json();
-
-          if (verifyData.status === "verified") {
-            await updateBookingStatus(
-              booking.id,
-              "Completed",
-              "Paid"
-            );
-
-            alert("Payment Successful & Released!");
-          } else {
-            alert("Payment verification failed.");
-          }
+        handler: async function () {
+          await updateBookingStatus(booking.id, "Completed", "Paid");
+          alert("Payment Successful & Released!");
         },
 
         theme: {
@@ -169,6 +141,7 @@ function CustomerDashboard({ user }) {
       const rzp = new window.Razorpay(options);
       rzp.open();
     } catch (err) {
+      console.error(err);
       alert("Payment failed. Try again.");
     }
   };
@@ -184,7 +157,6 @@ function CustomerDashboard({ user }) {
   return (
     <div className="space-y-10">
 
-      {/* 🔹 SERVICES */}
       <div className="bg-white rounded-2xl shadow-lg p-6">
         <h2 className="text-2xl font-bold mb-6 text-gray-800">
           Nearby Services (50KM)
@@ -217,7 +189,6 @@ function CustomerDashboard({ user }) {
         </div>
       </div>
 
-      {/* 🔹 CUSTOMER FORM */}
       <div className="bg-white rounded-2xl shadow-lg p-6">
         <h2 className="text-2xl font-bold mb-6 text-gray-800">
           Customer Details
@@ -225,13 +196,13 @@ function CustomerDashboard({ user }) {
 
         <div className="grid md:grid-cols-2 gap-4">
           <input
-            className="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 outline-none"
+            className="border border-gray-300 rounded-lg px-4 py-2"
             placeholder="Full Name"
             value={customerName}
             onChange={(e) => setCustomerName(e.target.value)}
           />
           <input
-            className="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 outline-none"
+            className="border border-gray-300 rounded-lg px-4 py-2"
             placeholder="Mobile Number"
             value={customerMobile}
             onChange={(e) => setCustomerMobile(e.target.value)}
@@ -240,13 +211,12 @@ function CustomerDashboard({ user }) {
 
         <button
           onClick={handleBooking}
-          className="mt-6 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition font-semibold"
+          className="mt-6 bg-blue-600 text-white px-6 py-3 rounded-lg"
         >
           Book Selected Service
         </button>
       </div>
 
-      {/* 🔹 BOOKINGS */}
       <div className="bg-white rounded-2xl shadow-lg p-6">
         <h2 className="text-2xl font-bold mb-6 text-gray-800">
           My Bookings
@@ -254,10 +224,7 @@ function CustomerDashboard({ user }) {
 
         <div className="space-y-6">
           {bookings.map((b) => (
-            <div
-              key={b.id}
-              className="border rounded-xl p-5 shadow-sm hover:shadow-md transition"
-            >
+            <div key={b.id} className="border rounded-xl p-5 shadow-sm">
               <div className="flex justify-between items-center mb-3">
                 <p className="font-semibold text-gray-800">
                   {b.bookingCode}
@@ -277,48 +244,10 @@ function CustomerDashboard({ user }) {
               {b.status === "Accepted" && (
                 <button
                   onClick={() => handleCompleteAndPay(b)}
-                  className="mt-4 bg-green-600 text-white px-5 py-2 rounded-lg hover:bg-green-700 transition font-semibold"
+                  className="mt-4 bg-green-600 text-white px-5 py-2 rounded-lg"
                 >
                   Complete & Release Payment
                 </button>
-              )}
-
-              {b.status === "Completed" && b.rating === 0 && (
-                <div className="mt-4 space-y-3">
-                  <select
-                    className="border rounded-lg px-3 py-2"
-                    value={rating}
-                    onChange={(e) => setRating(Number(e.target.value))}
-                  >
-                    <option value="0">Select Rating</option>
-                    <option value="1">⭐</option>
-                    <option value="2">⭐⭐</option>
-                    <option value="3">⭐⭐⭐</option>
-                    <option value="4">⭐⭐⭐⭐</option>
-                    <option value="5">⭐⭐⭐⭐⭐</option>
-                  </select>
-
-                  <input
-                    className="border rounded-lg px-3 py-2 w-full"
-                    placeholder="Write review"
-                    value={review}
-                    onChange={(e) => setReview(e.target.value)}
-                  />
-
-                  <button
-                    onClick={() => handleReviewSubmit(b.id)}
-                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
-                  >
-                    Submit Review
-                  </button>
-                </div>
-              )}
-
-              {b.rating > 0 && (
-                <div className="mt-4 bg-green-50 p-3 rounded-lg">
-                  <p>⭐ Rating: {b.rating}</p>
-                  <p>📝 {b.review}</p>
-                </div>
               )}
             </div>
           ))}
